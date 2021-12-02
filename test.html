@@ -44,7 +44,11 @@
 	var pids = [];
 	var firstKill = [true, true, true];
 	var downstairs = 0;
-	var time = -0.5;
+	var startTime = "2021-11-30T09:20:00";
+	var shour = Number(startTime.substring(11, 13));
+	var smin = Number(startTime.substring(14, 16));
+	var ssec = Number(startTime.substring(17, 19));
+	var endTime = "2021-11-30T12:20:00";
 	swal({
 		text: "Paste student data from excel or google sheets.",
 		content: "input"
@@ -56,24 +60,26 @@
 		}
 		$("tbody").append("<tr id = \"count\"><td class = \"uid\"></td><td class = \"name\"></td><td class = \"0\">0</td><td class = \"1\">0</td><td class = \"2\">0</td><td class = \"rank\">0</td><td class = \"time\"></td></tr></tr>");
 		swal({
-			text: "This is a test page, so you don't need to set the start of sid.",
+			text: "This is a test page, so you don't need to set the start of time.",
 		}).then(function () {
 			swal({
-				text: "This test page is not live, so the time is not accurate.\nSince the start page is set at 200, you\'ll have to wait for seconds to see the results.\n(If you are using computer, you can get excel files from \"exportxls()\")"
+				text: "This test page's time is accurate.\nSince the start page is set at 200, you\'ll have to wait for seconds to see the results.\n(If you are using computer, you can get excel files from \"exportxls()\")"
 			}).then(function (){
 				getScore(200);
 			});
 		});
 	});
 	function getScore (page) {
-		time += 0.5;
 		$.ajax({
 			method: 'GET',
 			url: 'https://judgegirl.csie.org/api/submissions?page=' + page,
 		}).done(function (submit_list){
 			for (let i = submit_list.length - 1; i >= 0; i--)
 			{
-				if (submit_list[i].sid < 427229 || submit_list[i].sid > 427668)
+				let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+				let unixTime = parseInt(submit_list[i].ts) - tzOffset;
+				let subTime = new Date(unixTime).toISOString().slice(0, -5);
+				if (subTime < startTime || subTime > endTime)
 				{
 					continue;
 				}
@@ -114,15 +120,27 @@
 						if (downstairs == 0)
 						{
 							$("#" + submit_list[i].lgn).find(".rank").css("background-color", "#FF3399");
-							$("#" + submit_list[i].lgn).find(".rank").text(++downstairs);
-							$("#" + submit_list[i].lgn).find(".time").text(time);
 						}
 						else
 						{
 							$("#" + submit_list[i].lgn).find(".rank").css("background-color", "#FF6600");
-							$("#" + submit_list[i].lgn).find(".rank").text(++downstairs);
-							$("#" + submit_list[i].lgn).find(".time").text(time);
 						}
+						$("#" + submit_list[i].lgn).find(".rank").text(++downstairs);
+						let hour = Number(subTime.substring(11, 13));
+						let min = Number(subTime.substring(14, 16));
+						let sec = Number(subTime.substring(17, 19));
+						hour -= shour;
+						min -= smin;
+						sec -= ssec;
+						if (sec < 0) sec += 60, min--;
+						if (min < 0) min += 60, hour--;
+						hour = String(hour);
+						min = String(min);
+						sec = String(sec);
+						if (hour < 10) hour = "0" + hour;
+						if (min < 10) min = "0" + min;
+						if (sec < 10) sec = "0" + sec;
+						$("#" + submit_list[i].lgn).find(".time").text(hour + ":" + min + ":" + sec);
 						$("#count").find(".rank").text(downstairs);
 					}
 				}
@@ -130,7 +148,7 @@
 				{
 					if ($("#" + submit_list[i].lgn).find("." + index).text() <= submit_list[i].scr * submit_list[i].factor)
 					{
-						$("#" + submit_list[i].lgn).find("." + index).text(submit_list[i].scr * submit_list[i].factor);
+						$("#" + submit_list[i].lgn).find("." + index).text(Math.round(submit_list[i].scr * submit_list[i].factor));
 						$("#" + submit_list[i].lgn).find("." + index).css("background-color", "#F8F820");
 					}
 				}
@@ -138,18 +156,24 @@
 			getScore(page - 1);
 		});
 	}
-	function exportxls (fileName) {
-		if (fileName == undefined)
+	function exportxls (name) {
+		if (name == undefined)
 		{
-			fileName = "test";
+			name = "test";
 		}
-		let table = document.getElementById("table");
-		let html = table.outerHTML;
-  		let url = 'data:application/vnd.ms-excel,' + escape(html);
-  		let elem = document.createElement("a");
-  		elem.setAttribute("href", url);
-  		elem.setAttribute("download", fileName + ".xls");
-  		elem.click();
-  		return false;
+		let uri = 'data:application/vnd.ms-excel;base64,';
+		let template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>{table}</table></body></html>';
+		let base64 = function (s) {
+			return window.btoa(unescape(encodeURIComponent(s)));
+		};
+		let format = function (s, c) {
+			return s.replace(/{(\w+)}/g, function (m, p) { return c[p]; });
+		};
+		let ctx = { worksheet: 'Worksheet1', table: table.innerHTML };
+		let hiddenElement = document.createElement('a');
+		hiddenElement.href = uri + base64(format(template, ctx));
+		hiddenElement.target = '_blank';
+		hiddenElement.download = `${name}.xls`;
+		hiddenElement.click();
 	}
 </script>

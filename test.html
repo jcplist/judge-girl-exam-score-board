@@ -40,6 +40,7 @@
 	</table>
 </body>
 <script type="text/javascript">
+	"use strict";
 	var names;
 	var pids = [];
 	var firstKill = [true, true, true];
@@ -50,9 +51,9 @@
 	var ssec = Number(startTime.substring(17, 19));
 	var endTime = "2021-11-30T12:20:00";
 	swal({
-		text: "Paste student data from excel or google sheets.",
+		text: "Paste student data from excel or google sheets.\n(Names should NOT contain spaces.)",
 		content: "input"
-	}).then(input => {
+	}).then( input => {
 		names = input.split(/\n|\r|\t| /);
 		for (let i = 0; i < names.length; i += 2)
 		{
@@ -60,16 +61,45 @@
 		}
 		$("tbody").append("<tr id = \"count\"><td class = \"uid\"></td><td class = \"name\"></td><td class = \"0\">0</td><td class = \"1\">0</td><td class = \"2\">0</td><td class = \"rank\">0</td><td class = \"time\"></td></tr></tr>");
 		swal({
-			text: "This is a test page, so you don't need to set the start of time.",
-		}).then(function () {
-			swal({
-				text: "This test page's time is accurate.\nSince the start page is set at 200, you\'ll have to wait for seconds to see the results.\n(If you are using computer, you can get excel files from \"exportxls()\")"
-			}).then(function (){
-				getScore(200);
-			});
+			text: "This page can get data of closed exam.\nIf you don't type the start time of the exam, the default is the test of 2021/11/30.\n(Input format: \"2021-11-30T13:20:00\")\nDON'T TYPE QUOTATION MARKS.",
+			content: "input"
+		}).then( input => {
+			if (input != "")
+			{
+				startTime = input;
+				shour = Number(startTime.substring(11, 13));
+				smin = Number(startTime.substring(14, 16));
+				ssec = Number(startTime.substring(17, 19));
+				swal({
+					text: "Set the end time.\n(Input format: \"2021-11-30T12:20:00\")\nDON'T TYPE QUOTATION MARKS.",
+					content: "input"
+				}).then( input => {
+					if (input != "") endTime = input;
+					let startpage = 200;
+					swal({
+						text: "Set start page. Default is 200.\nIf start page is too large then you need to wait.\ntips: If you are using computer, you can get excel files from \"exportxls()\"(Type exportxls() in console.)",
+						content: "input"
+					}).then(input => {
+						if (input != "") startpage = Number(input);
+						getScore(startpage);
+					});
+				});
+			}
+			else
+			{
+				let startpage = 200;
+				swal({
+					text: "Set start page. Default is 200.\ntips: If you are using computer, you can get excel files from \"exportxls()\"",
+					content: "input"
+				}).then(input => {
+					if (input != "") startpage = Number(input);
+					getScore(startpage);
+				});
+			}
 		});
 	});
 	function getScore (page) {
+		if (page < 0) return 0;
 		$.ajax({
 			method: 'GET',
 			url: 'https://judgegirl.csie.org/api/submissions?page=' + page,
@@ -79,7 +109,11 @@
 				let tzOffset = (new Date()).getTimezoneOffset() * 60000;
 				let unixTime = parseInt(submit_list[i].ts) - tzOffset;
 				let subTime = new Date(unixTime).toISOString().slice(0, -5);
-				if (subTime < startTime || subTime > endTime)
+				if (subTime > endTime)
+				{
+					return 0;
+				}
+				if (subTime < startTime)
 				{
 					continue;
 				}
@@ -89,6 +123,30 @@
 					pids.push(submit_list[i].pid);
 					index = pids.indexOf(submit_list[i].pid);
 					$("th." + index).text(submit_list[i].ttl);
+					if (index == 2)
+					{
+						if (pids[2] < pids[1])
+						{//012 > 021
+							swapCol(1, 2);
+							if (pids[2] < pids[0])
+							{//021 > 201
+								swapCol(0, 2);
+								if (pids[1] < pids[0])
+								{//201 > 210
+									swapCol(0, 1)
+								}
+							}
+						}
+						else if (pids[1] < pids[0])
+						{//012 > 102
+							swapCol(0, 1);
+							if (pids[2] < pids[0])
+							{//102 > 120
+								swapCol(0, 2);
+							}
+						}
+
+					}
 				}
 				if ($("#" + submit_list[i].lgn).find("." + index).text() == 100)
 				{
@@ -154,6 +212,13 @@
 				}
 			}
 			getScore(page - 1);
+		});
+	}
+	function swapCol (before, after)
+	{
+		$("thead tr th." + after).insertBefore("thead tr th." + before);
+		$("tbody tr").each(function () {
+			$(this).find(".2").insertBefore($(this).find(".1"));
 		});
 	}
 	function exportxls (name) {

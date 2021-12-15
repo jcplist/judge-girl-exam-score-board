@@ -43,7 +43,7 @@
 	"use strict";
 	var names;
 	var pids = [];
-	var firstKill = [true, true, true];
+	var ac_count = [0, 0, 0];
 	var downstairs = 0;
 	var startTime = "2021-11-30T09:20:00";
 	var shour = Number(startTime.substring(11, 13));
@@ -155,16 +155,15 @@
 				if (submit_list[i].scr * submit_list[i].factor == 100)
 				{
 					$("#" + submit_list[i].lgn).find("." + index).text(100);
-					if (firstKill[index])
+					if (ac_count[index] == 0)
 					{
-						firstKill[index] = false;
 						$("#" + submit_list[i].lgn).find("." + index).css("background-color", "#20F8F8");
 					}
 					else
 					{
 						$("#" + submit_list[i].lgn).find("." + index).css("background-color", "#3FBF3F");
 					}
-					$("#count").find("." + index).text(Number($("#count").find("." + index).text()) + 1);
+					$("#count").find("." + index).text(++ac_count[index]);
 					let c = 0;
 					for (let j = 0; j < 3; j++)
 					{
@@ -218,7 +217,7 @@
 	{
 		$("thead tr th." + after).insertBefore("thead tr th." + before);
 		$("tbody tr").each(function () {
-			$(this).find(".2").insertBefore($(this).find(".1"));
+			$(this).find("." + after).insertBefore($(this).find("." + before));
 		});
 	}
 	function exportxls (name) {

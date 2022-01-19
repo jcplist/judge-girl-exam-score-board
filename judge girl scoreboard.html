@@ -42,6 +42,8 @@
 </body>
 <script type="text/javascript">
 	var names;
+	var unknown = [];
+	var unknownGrades = [];
 	var pids = [];
 	var ac_count = [0, 0, 0];
 	var downstairs = 0;
@@ -137,6 +139,22 @@
 				}
 				if ($("#" + submit_list[i].lgn).find("." + index).text() == 100)
 				{
+					continue;
+				}
+				if (names.indexOf(submit_list[i].lgn) < 0)
+				{
+					let ii = unknown.indexOf(submit_list[i].lgn);
+					if (ii < 0)
+					{
+						console.log(`Who is ${submit_list[i].lgn}?`);
+						unknown.push(submit_list[i].lgn);
+						ii = unknown.indexOf(submit_list[i].lgn);
+						unknownGrades.push([undefined, undefined, undefined]);
+					}
+					if (unknownGrades[ii][index] == undefined || unknownGrades[ii][index] < submit_list[i].scr * submit_list[i].factor)
+					{
+						unknownGrades[ii][index] = submit_list[i].scr * submit_list[i].factor;
+					}
 					continue;
 				}
 				if (submit_list[i].scr * submit_list[i].factor == 100)
